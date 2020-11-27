@@ -1,0 +1,51 @@
+version: "3"
+
+volumes:
+  php-fpm-socket:
+  db-store:
+
+services:
+  app:
+    container_name: ${APP_NAME}_app
+    build:
+      context: .
+      dockerfile: app.dockerfile
+    volumes:
+      - php-fpm-socket:/var/run/php-fpm
+      - ./src:/var/www/html
+    environment:
+      # src内の.envよりも優先される
+      - DB_CONNECTION=mysql
+      - DB_HOST=db #dbのサービス名
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_NAME}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_USERPASSWORD}
+
+  web:
+    container_name: ${APP_NAME}_web
+    build:
+      context: .
+      dockerfile: nginx.dockerfile
+    ports:
+      - ${WEB_PORT}:80
+    volumes:
+      - ./src:/var/www/html
+      - php-fpm-socket:/var/run/php-fpm
+
+  db:
+    container_name: ${APP_NAME}_db
+    image: mysql:5.7
+    volumes:
+      - ./db/data:/var/lib/mysql
+      - ./db/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./db/sql:/docker-entrypoint-initdb.d
+    ports:
+      - ${DB_PORT}:3306
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_USERPASSWORD}
+      SERVICE_TAGS: dev
+      TZ: "Asia/Tokyo"
